@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+
+  db:
+    image: postgres
+    volumes:
+      - 'family_life_db_data:/var/lib/postgresql/data'
+    ports:
+      - '54321:5432'
+
+  user_api:
+    build:
+      context: ./user_api
+    command: ./startup.sh
+    volumes:
+      - './user_api:/app'
+    environment:
+      - USER_API_DB_USERNAME=postgres
+      - USER_API_DB_PASSWORD=
+      - USER_API_DB_HOST=db
+      - VIRTUAL_HOST=user_api.familylife.test
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+      - nginx-proxy
+      - redis
+
+  user_api_docs:
+    image: swaggerapi/swagger-ui:v2.2.9
+    ports:
+      - '8080:8080'
+    depends_on:
+      - user_api
+    environment:
+      - VIRTUAL_HOST=swagger.user_api.familylife.test
+      - API_URL=http://user_api.familylife.test/swagger/v1/api_docs.json
+
+  redis:
+    image: redis
+
+volumes:
+  family_life_db_data: null
